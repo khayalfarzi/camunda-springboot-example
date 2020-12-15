@@ -1,61 +1,68 @@
 package az.company.camunda.controller;
 
-import az.company.camunda.dto.EmployeeDTO;
 import org.camunda.bpm.engine.ProcessEngine;
-import org.camunda.bpm.engine.ProcessEngines;
 import org.camunda.bpm.engine.RuntimeService;
+import org.camunda.bpm.engine.TaskService;
+import org.camunda.bpm.engine.runtime.ActivityInstance;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
+import org.camunda.bpm.engine.task.Task;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 @RestController
-@RequestMapping("/user-task-rest-call")
+@RequestMapping("/rest")
 public class UserTaskControllerExample {
 
-    private static final String PROCESS_DEFINITION_KEY = "restCallForUserTask";
+    private static final String PROCESS_DEFINITION_KEY = "test_rest";
 
-    @PostMapping
+    @Autowired
+    private RuntimeService runtimeService;
+    @Autowired
+    private TaskService taskService;
+    private ProcessEngine processEngine;
+    //    @Autowired
+    private ProcessInstance processInstance;
+    private ActivityInstance activityInstance;
+
+    @GetMapping("/start")
     public ResponseEntity<?> startBPMNProcess() {
-
-        System.out.println("======================= Process started ===================================");
-
-        ProcessEngine processEngine = ProcessEngines.getDefaultProcessEngine();
-
-        RuntimeService runtimeService = processEngine.getRuntimeService();
-
-        ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(PROCESS_DEFINITION_KEY);
-
+        System.out.println("======================= Start Process started ===================================");
+        runtimeService.startProcessInstanceByKey(PROCESS_DEFINITION_KEY);
+        System.out.println("======================= Start Process ended ===================================");
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    @PostMapping("/complete-user-task")
-    public ResponseEntity<?> callUserTask(@RequestBody EmployeeDTO dto) {
+    @GetMapping("/complete")
+    public ResponseEntity<?> callUserTask() {
+        List<Task> tasks = taskService.createTaskQuery().taskAssignee("demo").list();
 
-        ProcessEngine processEngine = ProcessEngines.getDefaultProcessEngine();
+        String id = null;
+        System.out.println("start olunmus task " + tasks.toString());
 
-        RuntimeService runtimeService = processEngine.getRuntimeService();
+        for (Task t : tasks) {
+            System.out.println("======================= Complete Process started ===================================");
+            System.out.println(t);
+            System.out.println("======================= Complete Process ended ===================================");
 
-        ProcessInstance instance;
-        System.out.println("===");
+            System.out.println(t.getAssignee() + " " +
+                    t.getCaseDefinitionId() + " " +
+                    t.getCaseExecutionId() + " " +
+                    t.getCaseInstanceId() + " " +
+                    t.getId() + " " +
+                    t.getName() + " " +
+                    t.getPriority());
+            id = t.getId();
+        }
 
-        System.out.println("===");
-
-        Map<String, Object> processVariables = new HashMap<>();
-
-        processVariables.put("id", dto.getId());
-        processVariables.put("name", dto.getName());
-
-
-        processEngine.getTaskService().complete("Activity_088scpe", processVariables);
+        taskService.setVariable(id, "key", "yes");
+        taskService.complete(id);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
-
 }
